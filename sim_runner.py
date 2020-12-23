@@ -19,7 +19,7 @@ WHITE = (255, 255, 255)
 n_rays = 8 # number of rays that each player uses for getting distances 
 START = (70, 90)
 FINISH = (520, 430)
-MAX_VEL = 5 # max amount it can travel in one frame
+MAX_VEL = 2 # max amount it can travel in one frame
 walls = getWalls()
 mcq = pygame.transform.smoothscale(pygame.image.load('the_mcqueen.png').convert_alpha(), img_scale)
 color_options = getColors()
@@ -54,8 +54,8 @@ def eval_genomes(genomes, config):
         cars.append(car(START, mcq, col))
         gnms.append(genome)
 
-    
-    while len(cars)>0: # while still cars
+    run = True
+    while run and len(cars)>0: # while still cars
 
         scrn.fill((255, 255, 255))
         pygame.draw.circle(scrn, (0,0,0), START, 2)
@@ -108,15 +108,20 @@ def eval_genomes(genomes, config):
                             closest = dist
                             cur_closest = (px, py)
 
-                    # CIRCLE COLLISION DETECTION
-                    q = loc # center of circle
-                    r = c.radius # radius of circle
-                    p1 = wall[0] # start of line segment
-                    v = (x4-x3, y4-y3) # vector along line seg
-                    a = np.dot(v, v)
-                    b = 2*np.dot(v, (p1[0]-q[0], p1[1]-q[1]))
-                    c2 = np.dot(p1, p1) + np.dot(q, q) - 2*np.dot(p1, q) - r**2
-                    valid = ((b**2) - (4*a*c2)) < 0 # if it's less than 0, it's valid
+                    if closest == 100000000000000000:
+                        valid = False
+
+                    else:
+                        # CIRCLE COLLISION DETECTION
+
+                        q = c.pos # center of circle
+                        r = c.radius # radius of circle
+                        p1 = (x3, y3) # start of line segment
+                        v = (x4-x3, y4-y3) # vector along line seg
+                        a = np.dot(v, v)
+                        b = 2*np.dot(v, (p1[1]-q[1], p1[0]-q[0]))
+                        c2 = np.dot(p1, p1) + np.dot(q, q) - 2*np.dot(q, p1) - r**2
+                        valid = ((b**2) - (4*a*c2)) < 0 # if it's less than 0, no intersections
 
                 ray_ends.append(cur_closest if cur_closest!=() else (x2, y2))
                 distances.append(closest) # will use to check if the car has collided with a wall
@@ -144,14 +149,14 @@ def eval_genomes(genomes, config):
                 vel = outs[1]
                 angle = (pi/2) * turn
                 new_x = c.pos[0] + int(MAX_VEL*vel*np.cos(angle))
-                new_y = c.pos[1] + int(MAX_VEL*vel*np.sin(angle))
+                new_y = c.pos[1] + int(MAX_VEL*vel*np.sin(angle)) + 1
                 c.pos = (new_x, new_y)
 
             else: 
                 # means it collided
                 cars.pop(idx)
                 nets.pop(idx)
-                gnms[idx].fitness -= 1
+                gnms[idx].fitness -= 2
                 gnms.pop(idx)
                 # continue # cut this loop short
 
@@ -159,6 +164,10 @@ def eval_genomes(genomes, config):
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 pygame.quit()
+                run = False
+            elif ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_q:
+                    run = False
 
         pygame.display.flip()    
     
